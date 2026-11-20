@@ -20,8 +20,7 @@ const HISTORY_STORAGE_KEY = "shotorko_recent_checks_v1";
 const HISTORY_ENABLED_KEY = "shotorko_history_enabled_v1";
 const MAX_HISTORY_ITEMS = 6;
 
-// Hide long digit runs (OTP, phone, card, account numbers) before anything is stored
-function maskDigits(text: string) {
+function maskDigits(text: string): string {
   return text.replace(/\d{4,}/g, (m) => "\u2022".repeat(m.length));
 }
 
@@ -29,68 +28,56 @@ function getRiskStyles(level: RiskLevel) {
   switch (level) {
     case "high":
       return {
-        badge: "bg-red-100 text-red-800 border-red-200",
-        card: "border-red-200 bg-red-50/50",
-        highlight: "bg-red-200/80 text-red-950 border-b-2 border-red-500",
+        badge: "bg-rose-500/15 text-rose-700 border-rose-500/30",
+        card: "border-rose-200/90 bg-gradient-to-b from-rose-50/80 to-white",
+        meter: "bg-rose-600",
+        meterWidth: "w-full",
+        highlight:
+          "bg-rose-200/80 text-rose-950 border-b-2 border-rose-500 rounded px-1 py-0.5 font-medium",
         label: "High Risk",
+        summaryNote:
+          "Multiple strong scam or phishing indicators were detected. Do not share OTPs/PINs, send money, or click unverified links.",
       };
     case "medium":
       return {
-        badge: "bg-amber-100 text-amber-800 border-amber-200",
-        card: "border-amber-200 bg-amber-50/50",
-        highlight: "bg-amber-200/80 text-amber-950 border-b-2 border-amber-500",
+        badge: "bg-amber-500/15 text-amber-800 border-amber-500/30",
+        card: "border-amber-200/90 bg-gradient-to-b from-amber-50/75 to-white",
+        meter: "bg-amber-500",
+        meterWidth: "w-2/3",
+        highlight:
+          "bg-amber-200/80 text-amber-950 border-b-2 border-amber-500 rounded px-1 py-0.5 font-medium",
         label: "Medium Risk",
+        summaryNote:
+          "Some caution signals or link anomalies appeared. Verify the sender independently before acting.",
       };
     default:
       return {
-        badge: "bg-emerald-100 text-emerald-800 border-emerald-200",
-        card: "border-emerald-200 bg-emerald-50/50",
+        badge: "bg-emerald-500/15 text-emerald-800 border-emerald-500/30",
+        card: "border-emerald-200/90 bg-gradient-to-b from-emerald-50/70 to-white",
+        meter: "bg-emerald-600",
+        meterWidth: "w-1/3",
         highlight:
-          "bg-emerald-200/80 text-emerald-950 border-b-2 border-emerald-500",
+          "bg-emerald-200/80 text-emerald-950 border-b-2 border-emerald-500 rounded px-1 py-0.5 font-medium",
         label: "Low Risk",
+        summaryNote:
+          "Few or no known scam patterns matched, but always stay cautious with unexpected requests or links.",
       };
-  }
-}
-
-// Clipboard helper: modern API first, legacy fallback second. Returns true if copied.
-async function copyText(text: string): Promise<boolean> {
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch {
-    // fall through to the legacy method
-  }
-  try {
-    const area = document.createElement("textarea");
-    area.value = text;
-    area.setAttribute("readonly", "");
-    area.style.position = "fixed";
-    area.style.opacity = "0";
-    document.body.appendChild(area);
-    area.select();
-    const ok = document.execCommand("copy");
-    document.body.removeChild(area);
-    return ok;
-  } catch {
-    return false;
   }
 }
 
 function formatSummary(result: AnalysisResult, levelLabel: string): string {
   const signalLines = result.hits.map(
-    (h) => `- ${h.label} (+${h.score}): ${h.advice}`
+    (h) => `- ${h.label} (+${h.score}): ${h.reason}`
   );
   const linkLines = result.links.map((l) => {
     const flagText = l.flags.length > 0 ? l.flags.join(", ") : "No link flags";
-    return `- Link (${l.url}): ${flagText}`;
+    return `- Link (${l.url} | +${l.score}): ${flagText}`;
   });
 
   const parts = [
-    `Shotorko Check Result: ${levelLabel} (Score: ${result.total})`,
-    signalLines.length > 0 ? `Signals:\n${signalLines.join("\n")}` : "",
-    linkLines.length > 0 ? `Links:\n${linkLines.join("\n")}` : "",
+    `Shotorko Check Result: ${levelLabel} (Total Score: ${result.total} | Message: +${result.ruleScore}, Links: +${result.linkScore})`,
+    signalLines.length > 0 ? `Message Signals:\n${signalLines.join("\n")}` : "",
+    linkLines.length > 0 ? `Link Analysis:\n${linkLines.join("\n")}` : "",
     "Note: This is not a final verdict. Always verify through official channels.",
   ].filter(Boolean);
 
@@ -101,9 +88,8 @@ export default function HomePage() {
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [copied, setCopied] = useState(false);
-  const [copyFailed, setCopyFailed] = useState(false);
 
-  const [historyEnabled, setHistoryEnabled] = useState(false);
+  const [historyEnabled, setHistoryEnabled] = useState(true);
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
   useEffect(() => {
@@ -112,9 +98,7 @@ export default function HomePage() {
       if (savedEnabled !== null) {
         setHistoryEnabled(savedEnabled === "true");
       }
-      // Remove history saved by older versions (it was kept in localStorage)
-      localStorage.removeItem(HISTORY_STORAGE_KEY);
-      const savedHistory = sessionStorage.getItem(HISTORY_STORAGE_KEY);
+      const savedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
       if (savedHistory) {
         const parsed = JSON.parse(savedHistory) as HistoryItem[];
         if (Array.isArray(parsed)) {
@@ -125,6 +109,14 @@ export default function HomePage() {
       // Ignore storage access errors in restricted browser modes
     }
   }, []);
+
+  function saveHistoryToStorage(items: HistoryItem[]) {
+    try {
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(items));
+    } catch {
+      // Ignore storage errors
+    }
+  }
 
   function recordHistory(rawText: string, analysis: AnalysisResult) {
     if (!historyEnabled) return;
@@ -148,11 +140,7 @@ export default function HomePage() {
 
     setHistory((prev) => {
       const updated = [newItem, ...prev].slice(0, MAX_HISTORY_ITEMS);
-      try {
-        sessionStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated));
-      } catch {
-        // Ignore storage errors
-      }
+      saveHistoryToStorage(updated);
       return updated;
     });
   }
@@ -161,7 +149,6 @@ export default function HomePage() {
     const analysis = analyze(rawText);
     setResult(analysis);
     setCopied(false);
-    setCopyFailed(false);
     recordHistory(rawText, analysis);
   }
 
@@ -185,10 +172,13 @@ export default function HomePage() {
     if (!result) return;
     const levelLabel = getRiskStyles(result.level).label;
     const summary = formatSummary(result, levelLabel);
-    const ok = await copyText(summary);
-    setCopied(ok);
-    setCopyFailed(!ok);
-    if (ok) setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(summary);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
   }
 
   function handleToggleHistory() {
@@ -203,10 +193,18 @@ export default function HomePage() {
     });
   }
 
+  function handleDeleteHistoryItem(id: string) {
+    setHistory((prev) => {
+      const updated = prev.filter((item) => item.id !== id);
+      saveHistoryToStorage(updated);
+      return updated;
+    });
+  }
+
   function handleClearHistory() {
     setHistory([]);
     try {
-      sessionStorage.removeItem(HISTORY_STORAGE_KEY);
+      localStorage.removeItem(HISTORY_STORAGE_KEY);
     } catch {
       // Ignore storage errors
     }
@@ -224,43 +222,54 @@ export default function HomePage() {
   return (
     <>
       <Navbar />
-      <main className="min-h-screen bg-slate-50 text-slate-900">
-        <div className="mx-auto max-w-3xl px-4 py-12">
-          <header className="mb-8">
-            <p className="text-sm font-medium text-slate-500">
-              Shotorko • Browser-Only Scam Check
-            </p>
-            <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
+      <main className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-indigo-50/40 text-slate-900">
+        <div className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
+          <header className="mb-8 rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-xs backdrop-blur-xs">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center rounded-full bg-indigo-600/10 px-3 py-1 text-xs font-semibold text-indigo-700">
+                Shotorko • Client-Side Shield
+              </span>
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+                Zero Server Upload • 4+ Digits Masked
+              </span>
+            </div>
+            <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
               Check a Suspicious Message or Link
             </h1>
-            <p className="mt-2 text-base text-slate-600">
-              Paste a message below to spot common scam signals. Nothing you paste
-              is sent to a server—all checks run locally in your browser.
+            <p className="mt-2 text-sm leading-relaxed text-slate-600 sm:text-base">
+              Paste an SMS, chat message, email, or URL to inspect scam signals
+              and risky links. Every check runs strictly inside your browser.
             </p>
           </header>
 
           <form
             onSubmit={handleCheck}
-            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs"
+            className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs sm:p-6"
           >
-            <label
-              htmlFor="message-input"
-              className="block text-sm font-semibold text-slate-800"
-            >
-              Message or link text
-            </label>
+            <div className="flex items-center justify-between gap-2">
+              <label
+                htmlFor="message-input"
+                className="block text-sm font-semibold text-slate-800"
+              >
+                Message or link text
+              </label>
+              <span className="text-xs font-medium text-slate-400">
+                {message.length} chars
+              </span>
+            </div>
+
             <textarea
               id="message-input"
               rows={5}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Paste SMS, chat message, email, or link here..."
-              className="mt-2 w-full rounded-xl border border-slate-300 bg-slate-50 p-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:bg-white focus:outline-none"
+              className="mt-2.5 w-full rounded-xl border border-slate-300 bg-slate-50/80 p-3.5 text-sm leading-relaxed text-slate-900 placeholder:text-slate-400 transition focus:border-indigo-600 focus:bg-white focus:ring-3 focus:ring-indigo-600/10 focus:outline-none"
             />
 
-            <div className="mt-3">
-              <p className="mb-2 text-xs font-medium text-slate-500">
-                Quick test samples:
+            <div className="mt-4">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Quick test samples
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {PRESET_SAMPLES.map((sample) => (
@@ -268,7 +277,7 @@ export default function HomePage() {
                     key={sample.id}
                     type="button"
                     onClick={() => handleSelectPreset(sample.text)}
-                    className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-100 cursor-pointer"
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700 transition hover:border-indigo-300 hover:bg-indigo-50/60 hover:text-indigo-900 cursor-pointer"
                   >
                     {sample.buttonLabel}
                   </button>
@@ -276,11 +285,11 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="submit"
-                  className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 cursor-pointer"
+                  className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-xs transition hover:bg-indigo-700 cursor-pointer"
                 >
                   Check Message
                 </button>
@@ -288,14 +297,14 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={handleClear}
-                    className="rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500 hover:text-slate-800 cursor-pointer"
+                    className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 cursor-pointer"
                   >
                     Clear
                   </button>
                 )}
               </div>
 
-              <span className="text-xs text-slate-500">
+              <span className="text-xs font-medium text-slate-500">
                 Processed locally in browser
               </span>
             </div>
@@ -304,51 +313,91 @@ export default function HomePage() {
           {result && riskMeta && (
             <section
               aria-live="polite"
-              className={`mt-6 rounded-2xl border p-6 ${riskMeta.card}`}
+              className={`mt-6 rounded-2xl border p-5 shadow-xs sm:p-6 ${riskMeta.card}`}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
+                <div className="min-w-0 flex-1">
                   <span
-                    className={`inline-block rounded-full border px-3 py-1 text-xs font-semibold ${riskMeta.badge}`}
+                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${riskMeta.badge}`}
                   >
                     {riskMeta.label}
                   </span>
-                  <h2 className="mt-2 text-lg font-bold text-slate-900">
+                  <h2 className="mt-2.5 text-lg font-bold text-slate-950">
                     {totalFindings > 0
                       ? `${totalFindings} finding${
                           totalFindings > 1 ? "s" : ""
                         } detected`
                       : "No common scam patterns matched"}
                   </h2>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-700 sm:text-sm">
+                    {riskMeta.summaryNote}
+                  </p>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-slate-600">
-                    Risk score:{" "}
-                    <span className="font-semibold">{result.total}</span>
-                  </span>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-1.5 text-right">
+                    <span className="block text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                      Total Score
+                    </span>
+                    <span className="text-base font-bold text-slate-950">
+                      {result.total}
+                    </span>
+                  </div>
                   <button
                     type="button"
                     onClick={handleCopySummary}
-                    className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 transition hover:bg-slate-50 cursor-pointer"
+                    className="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-800 shadow-2xs transition hover:bg-slate-50 cursor-pointer"
                   >
-                    {copied ? "Copied" : copyFailed ? "Copy failed, try again" : "Copy Summary"}
+                    {copied ? "Copied!" : "Copy Summary"}
                   </button>
                 </div>
               </div>
 
+              <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-slate-200/80">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${riskMeta.meter} ${riskMeta.meterWidth}`}
+                />
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-2 rounded-xl border border-slate-200/80 bg-white p-3 text-center sm:grid-cols-3">
+                <div className="rounded-lg bg-slate-50/70 p-2">
+                  <p className="text-[11px] font-medium text-slate-500">
+                    Message Signals
+                  </p>
+                  <p className="mt-0.5 text-sm font-bold text-slate-900">
+                    +{result.ruleScore}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-slate-50/70 p-2">
+                  <p className="text-[11px] font-medium text-slate-500">
+                    Link Checks
+                  </p>
+                  <p className="mt-0.5 text-sm font-bold text-slate-900">
+                    +{result.linkScore}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-slate-50/70 p-2">
+                  <p className="text-[11px] font-medium text-slate-500">
+                    Risk Scale
+                  </p>
+                  <p className="mt-0.5 text-xs font-semibold text-slate-700">
+                    0–1 Low • 2–4 Med • 5+ High
+                  </p>
+                </div>
+              </div>
+
               {result.segments.length > 0 && (
-                <div className="mt-5 rounded-xl border border-slate-200/80 bg-white p-4">
+                <div className="mt-5 rounded-xl border border-slate-200/90 bg-white p-4">
                   <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                     Highlighted Text
                   </h3>
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
+                  <p className="break-words whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
                     {result.segments.map((seg, idx) =>
                       seg.highlighted ? (
                         <mark
                           key={idx}
                           title={seg.ruleLabel}
-                          className={`rounded px-1 py-0.5 font-medium ${riskMeta.highlight}`}
+                          className={riskMeta.highlight}
                         >
                           {seg.text}
                         </mark>
@@ -363,29 +412,26 @@ export default function HomePage() {
               {result.hits.length > 0 && (
                 <div className="mt-5">
                   <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Message Signals ({result.hits.length})
+                    Message Signals &amp; Reasons ({result.hits.length})
                   </h3>
                   <ul className="space-y-3">
                     {result.hits.map((hit) => (
                       <li
                         key={hit.id}
-                        className="rounded-xl border border-slate-200/80 bg-white p-4"
+                        className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs"
                       >
-                        <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-start justify-between gap-2">
                           <p className="font-semibold text-slate-900">
                             {hit.label}
                           </p>
-                          <span className="text-xs font-medium text-slate-500">
+                          <span className="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
                             +{hit.score}
                           </span>
                         </div>
-                        <p className="mt-1 text-xs text-slate-500">
-                          Matched phrase:{" "}
-                          <span className="font-mono font-medium text-slate-700">
-                            &ldquo;{hit.matchedText}&rdquo;
-                          </span>
+                        <p className="mt-1 text-xs text-slate-600">
+                          Why it triggered: {hit.reason}
                         </p>
-                        <p className="mt-1.5 text-sm text-slate-600">
+                        <p className="mt-1.5 text-sm leading-relaxed text-slate-700">
                           {hit.advice}
                         </p>
                       </li>
@@ -397,25 +443,25 @@ export default function HomePage() {
               {result.links.length > 0 && (
                 <div className="mt-5">
                   <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Detected Links ({result.links.length})
+                    Link Analysis ({result.links.length})
                   </h3>
                   <ul className="space-y-3">
                     {result.links.map((link) => (
                       <li
                         key={link.url}
-                        className="rounded-xl border border-slate-200/80 bg-white p-4"
+                        className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs"
                       >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
                           <span className="break-all font-mono text-sm font-semibold text-slate-900">
                             {link.url}
                           </span>
-                          <span className="text-xs font-medium text-slate-500">
+                          <span className="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
                             +{link.score}
                           </span>
                         </div>
                         <p className="mt-1 text-xs text-slate-500">
-                          Host: <span className="font-mono">{link.host}</span> •
-                          Protocol:{" "}
+                          Domain: <span className="font-mono">{link.host}</span>{" "}
+                          • Protocol:{" "}
                           <span className="uppercase">{link.protocol}</span>
                         </p>
                         {link.flags.length > 0 ? (
@@ -426,8 +472,8 @@ export default function HomePage() {
                           </ul>
                         ) : (
                           <p className="mt-2 text-xs text-slate-600">
-                            No obvious link anomalies flagged by current checks.
-                            Still verify the sender before opening.
+                            No domain spelling, redirect, or phishing flags
+                            triggered. Still verify the sender before opening.
                           </p>
                         )}
                       </li>
@@ -437,14 +483,14 @@ export default function HomePage() {
               )}
 
               {totalFindings === 0 && (
-                <p className="mt-4 rounded-xl border border-slate-200/80 bg-white p-4 text-sm text-slate-700">
-                  None of the current rule patterns triggered. Still
-                  double-check the sender and avoid sharing sensitive codes or
-                  money on unverified requests.
+                <p className="mt-4 rounded-xl border border-slate-200/90 bg-white p-4 text-sm text-slate-700">
+                  None of the current rule patterns or link checks triggered.
+                  Still double-check the sender and avoid sharing sensitive codes
+                  or money on unverified requests.
                 </p>
               )}
 
-              <p className="mt-5 rounded-xl bg-white/80 p-3.5 text-xs leading-relaxed text-slate-600">
+              <p className="mt-5 rounded-xl border border-slate-200/70 bg-white/90 p-3.5 text-xs leading-relaxed text-slate-600">
                 This is not a final verdict—even a low-risk result does not
                 guarantee a message is safe. If you are unsure, contact the
                 organization through its official website or phone number.
@@ -452,24 +498,23 @@ export default function HomePage() {
             </section>
           )}
 
-          <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
+          <section className="mt-8 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-base font-bold text-slate-900">
+                <h2 className="text-base font-bold text-slate-950">
                   Recent Checks (Browser Only)
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Off by default. When on, kept only in this browser tab and
-                  cleared when you close it. Long numbers (OTP, phone, card)
-                  are hidden. Never sent to a server.
+                  Saved only in your browser&apos;s local storage with 4+
+                  digits masked—never sent to a server.
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={handleToggleHistory}
-                  className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 cursor-pointer"
+                  className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100 cursor-pointer"
                 >
                   {historyEnabled ? "Saving: On" : "Saving: Off"}
                 </button>
@@ -477,9 +522,9 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={handleClearHistory}
-                    className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 cursor-pointer"
+                    className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 cursor-pointer"
                   >
-                    Clear History
+                    Clear All
                   </button>
                 )}
               </div>
@@ -487,7 +532,7 @@ export default function HomePage() {
 
             {!historyEnabled ? (
               <p className="mt-4 text-sm text-slate-500">
-                History saving is off. Nothing you paste is stored.
+                History saving is turned off.
               </p>
             ) : history.length === 0 ? (
               <p className="mt-4 text-sm text-slate-500">
@@ -498,14 +543,17 @@ export default function HomePage() {
                 {history.map((item) => {
                   const badgeStyle = getRiskStyles(item.level).badge;
                   return (
-                    <li key={item.id} className="py-3 first:pt-0 last:pb-0">
+                    <li
+                      key={item.id}
+                      className="flex items-center justify-between gap-2 py-3 first:pt-0 last:pb-0"
+                    >
                       <button
                         type="button"
                         onClick={() => handleLoadHistoryItem(item)}
-                        className="flex w-full items-center justify-between gap-3 text-left group cursor-pointer"
+                        className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2 text-left group cursor-pointer"
                       >
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-slate-800 group-hover:text-slate-950">
+                        <div className="min-w-0 flex-1 pr-1">
+                          <p className="truncate text-sm font-medium text-slate-800 group-hover:text-indigo-700">
                             {item.preview}
                           </p>
                           <p className="mt-0.5 text-xs text-slate-400">
@@ -518,6 +566,16 @@ export default function HomePage() {
                         >
                           {getRiskStyles(item.level).label} ({item.total})
                         </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteHistoryItem(item.id)}
+                        aria-label="Remove history item"
+                        title="Remove from browser history"
+                        className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-slate-400 transition hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
+                      >
+                        Remove
                       </button>
                     </li>
                   );

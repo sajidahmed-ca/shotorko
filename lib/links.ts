@@ -17,6 +17,8 @@ const SHORTENER_HOSTS = new Set([
   "rb.gy",
   "cutt.ly",
   "tiny.cc",
+  "shorturl.at",
+  "rebrand.ly",
 ]);
 
 const MESSAGING_REDIRECT_HOSTS = new Set([
@@ -24,6 +26,7 @@ const MESSAGING_REDIRECT_HOSTS = new Set([
   "telegram.me",
   "wa.me",
   "api.whatsapp.com",
+  "chat.whatsapp.com",
 ]);
 
 const RISKY_TLDS = new Set([
@@ -39,14 +42,39 @@ const RISKY_TLDS = new Set([
   "cf",
   "zip",
   "mov",
+  "buzz",
+  "shop",
+  "loan",
 ]);
 
-const DECOY_KEYWORDS = [
+const BRAND_TARGETS = [
+  "bkash",
+  "nagad",
+  "rocket",
+  "upay",
+  "pathao",
+  "google",
+  "gmail",
+  "facebook",
+  "meta",
+  "instagram",
+  "whatsapp",
+  "telegram",
+  "apple",
+  "icloud",
+  "microsoft",
+  "amazon",
+  "paypal",
+];
+
+const PHISHING_KEYWORDS = [
   "login",
   "signin",
   "verify",
+  "verification",
   "update",
   "secure",
+  "security",
   "account",
   "wallet",
   "claim",
@@ -54,10 +82,34 @@ const DECOY_KEYWORDS = [
   "bonus",
   "kyc",
   "support",
+  "unlock",
+  "suspend",
+  "suspended",
+  "confirm",
+  "refund",
+  "free",
+  "gift",
+  "apk",
 ];
 
+const REDIRECT_PARAM_KEYS = new Set([
+  "url",
+  "redirect",
+  "redirect_url",
+  "redirect_uri",
+  "next",
+  "goto",
+  "return",
+  "return_url",
+  "target",
+  "dest",
+  "destination",
+  "out",
+  "link",
+]);
+
 const URL_REGEX =
-  /\b((?:https?:\/\/|www\.)[^\s<>"')\]]+|[a-z0-9-]+(?:\.[a-z0-9-]+)+\.(?:com|net|org|io|co|bd|xyz|top|click|icu|rest|gq|tk|ml|ga|cf|zip|mov|me|ly)(?:\/[^\s<>"')\]]*)?)/gi;
+  /\b((?:https?:\/\/|www\.)[^\s<>"')\]]+|[a-z0-9-]+(?:\.[a-z0-9-]+)+\.(?:com|net|org|io|co|bd|xyz|top|click|icu|rest|gq|tk|ml|ga|cf|zip|mov|buzz|shop|loan|me|ly|app|site)(?:\/[^\s<>"')\]]*)?)/gi;
 
 function cleanTrailingPunctuation(raw: string): string {
   return raw.replace(/[.,!?;:]+$/g, "");
@@ -80,6 +132,112 @@ function normalizeUrl(raw: string): URL | null {
 
 function isIpv4(host: string): boolean {
   return /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
+}
+
+function levenshteinDistance(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+
+  const dp: number[][] = Array.from({ length: m + 1 }, () =>
+    Array<number>(n + 1).fill(0)
+  );
+
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + cost
+      );
+    }
+  }
+
+  return dp[m][n];
+}
+
+function getBaseDomainLabel(host: string): string {
+  const parts = host.split(".").filter(Boolean);
+  if (parts.length <= 1) return host;
+  // Handle common second-level domains like example.com.bd or example.co.uk
+  const last = parts[parts.length - 1];
+  const secondLast = parts[parts.length - 2];
+  if (
+    parts.length >= 3 &&
+    last.length === 2 &&
+    ["com", "net", "org", "co", "gov", "edu"].includes(secondLast)
+  ) {
+    return parts[parts.length - 3];
+  }
+  return parts[parts.length - 2];
+}
+
+function detectSuspiciousSpelling(host: string): string | null {
+  const label = getBaseDomainLabel(host);
+  const leetNormalized = label
+    .replace(/0/g, "o")
+    .replace(/1/g, "l")
+    .replace(/3/g, "e")
+    .replace(/4/g, "a")
+    .replace(/5/g, "s")
+    .replace(/7/g, "t");
+
+  for (const brand of BRAND_TARGETS) {
+    // Exact brand name as main domain label is normal; lookalikes modify it
+    if (label === brand) continue;
+
+    if (
+      leetNormalized.includes(brand) ||
+      label.includes(brand) ||
+      brand.includes(label)
+    ) {
+      return `Domain label "${label}" resembles or includes "${brand}"`;
+    }
+
+    const maxDist = brand.length >= 6 ? 2 : 1;
+    if (
+      Math.abs(label.length - brand.length) <= maxDist &&
+      levenshteinDistance(label, brand) <= maxDist
+    ) {
+      return `Domain label "${label}" has a spelling close to "${brand}"`;
+    }
+  }
+
+  return null;
+}
+
+function detectRedirectSignal(parsed: URL, rawUrl: string): string | null {
+  for (const [key, value] of parsed.searchParams.entries()) {
+    const lowerKey = key.toLowerCase();
+    const lowerVal = value.trim().toLowerCase();
+    if (
+      REDIRECT_PARAM_KEYS.has(lowerKey) ||
+      /^https?:\/\//i.test(value.trim()) ||
+      lowerVal.startsWith("//")
+    ) {
+      return `Contains redirect-like parameter "${key}" pointing to another destination`;
+    }
+  }
+
+  const decodedPath = decodeURIComponent(parsed.pathname).toLowerCase();
+  if (
+    decodedPath.includes("http://") ||
+    decodedPath.includes("https://") ||
+    /\/redirect|\/redir|\/goto|\/out\b/i.test(decodedPath)
+  ) {
+    return "URL path appears to chain or forward to another address";
+  }
+
+  if (/https?:\/\/.*https?:\/\//i.test(rawUrl)) {
+    return "Contains multiple embedded web addresses inside one link";
+  }
+
+  return null;
 }
 
 export function analyzeLinks(text: string): {
@@ -157,13 +315,30 @@ export function analyzeLinks(text: string): {
       score += 1;
     }
 
-    const matchedDecoys = DECOY_KEYWORDS.filter((word) =>
+    const spellingFlag = detectSuspiciousSpelling(host);
+    if (spellingFlag) {
+      flags.push(spellingFlag);
+      score += 3;
+    }
+
+    const redirectFlag = detectRedirectSignal(parsed, cleaned);
+    if (redirectFlag) {
+      flags.push(redirectFlag);
+      score += 2;
+    }
+
+    const matchedKeywords = PHISHING_KEYWORDS.filter((word) =>
       fullLower.includes(word)
     );
-    if (matchedDecoys.length > 0) {
+    if (matchedKeywords.length > 0) {
       flags.push(
-        `Contains high-attention keywords in URL (${matchedDecoys.join(", ")})`
+        `Contains phishing-style terms (${matchedKeywords.slice(0, 5).join(", ")})`
       );
+      score += 1;
+    }
+
+    if (cleaned.length > 100) {
+      flags.push("Unusually long URL often used to hide tracking or parameters");
       score += 1;
     }
 

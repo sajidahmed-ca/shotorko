@@ -3,6 +3,7 @@ import { rules, type RiskLevel, type Rule } from "./rules";
 
 export type MatchedRule = Rule & {
   matchedText: string;
+  reason: string;
 };
 
 export type HighlightSegment = {
@@ -11,10 +12,22 @@ export type HighlightSegment = {
   ruleLabel?: string;
 };
 
+export type RiskReasonItem = {
+  id: string;
+  source: "message" | "link";
+  title: string;
+  reason: string;
+  advice?: string;
+  score: number;
+};
+
 export type AnalysisResult = {
   hits: MatchedRule[];
   links: LinkFinding[];
+  reasons: RiskReasonItem[];
   segments: HighlightSegment[];
+  ruleScore: number;
+  linkScore: number;
   total: number;
   level: RiskLevel;
 };
@@ -24,15 +37,6 @@ type Span = {
   end: number;
   label: string;
 };
-
-// Matches that sit inside a warning ("never share your OTP") are not scam signals
-const NEGATION =
-  /(do not|don't|dont|never|not to|কখনো|কখনও|করবেন না|দেবেন না|দিবেন না|বলবেন না|জানাবেন না|শেয়ার করবেন না|দিবেন না|korben na|dien na|diben na|den na|janaben na|bolben na)/i;
-
-function isNegated(text: string, start: number, end: number): boolean {
-  const window = text.slice(Math.max(0, start - 25), Math.min(text.length, end + 30));
-  return NEGATION.test(window);
-}
 
 function buildSegments(text: string, spans: Span[]): HighlightSegment[] {
   if (!text) return [];
@@ -89,7 +93,10 @@ export function analyze(text: string): AnalysisResult {
     return {
       hits: [],
       links: [],
+      reasons: [],
       segments: [],
+      ruleScore: 0,
+      linkScore: 0,
       total: 0,
       level: "low",
     };
@@ -97,6 +104,7 @@ export function analyze(text: string): AnalysisResult {
 
   const hits: MatchedRule[] = [];
   const spans: Span[] = [];
+  const reasons: RiskReasonItem[] = [];
 
   for (const rule of rules) {
     const flags = rule.pattern.flags.includes("g")
@@ -112,9 +120,6 @@ export function analyze(text: string): AnalysisResult {
         globalRegex.lastIndex++;
         continue;
       }
-      if (rule.negatable && isNegated(cleaned, match.index, match.index + match[0].length)) {
-        continue;
-      }
       if (!firstMatchedText) {
         firstMatchedText = match[0];
       }
@@ -126,9 +131,19 @@ export function analyze(text: string): AnalysisResult {
     }
 
     if (firstMatchedText) {
+      const reason = `Matched "${firstMatchedText}" under ${rule.label.toLowerCase()}.`;
       hits.push({
         ...rule,
         matchedText: firstMatchedText,
+        reason,
+      });
+      reasons.push({
+        id: `rule-${rule.id}`,
+        source: "message",
+        title: rule.label,
+        reason,
+        advice: rule.advice,
+        score: rule.score,
       });
     }
   }
@@ -146,6 +161,18 @@ export function analyze(text: string): AnalysisResult {
             : "Detected link",
       });
     }
+
+    if (link.flags.length > 0) {
+      reasons.push({
+        id: `link-${link.url}`,
+        source: "link",
+        title: `Link check: ${link.host}`,
+        reason: link.flags.join(". "),
+        advice:
+          "Avoid opening links from unverified messages; navigate to the official site manually.",
+        score: link.score,
+      });
+    }
   }
 
   const ruleScore = hits.reduce((sum, rule) => sum + rule.score, 0);
@@ -160,5 +187,14 @@ export function analyze(text: string): AnalysisResult {
 
   const segments = buildSegments(cleaned, spans);
 
-  return { hits, links, segments, total, level };
+  return {
+    hits,
+    links,
+    reasons,
+    segments,
+    ruleScore,
+    linkScore,
+    total,
+    level,
+  };
 }

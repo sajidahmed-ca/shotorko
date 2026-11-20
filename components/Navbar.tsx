@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const navItems = [
+const NAV_ITEMS = [
   { href: "/", label: "Check" },
   { href: "/scam-types", label: "Scam Types" },
   { href: "/what-to-do", label: "What To Do" },
@@ -14,30 +14,31 @@ export function Navbar() {
   const pathname = usePathname();
 
   return (
-    <header className="border-b border-slate-200 bg-white">
-      <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-4 px-4 py-4">
+    <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
+      <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
         <Link
           href="/"
-          className="text-lg font-bold tracking-tight text-slate-900"
+          className="flex items-center gap-2 text-base font-bold tracking-tight text-slate-950"
         >
-          Shotorko
+          <span className="inline-block h-2.5 w-2.5 rounded-full bg-indigo-600" />
+          <span>Shotorko</span>
         </Link>
 
-        <nav aria-label="Primary navigation" className="flex flex-wrap gap-1 sm:gap-2">
-          {navItems.map((item) => {
+        <nav aria-label="Main navigation" className="flex items-center gap-1 sm:gap-2">
+          {NAV_ITEMS.map((item) => {
             const isActive =
               item.href === "/"
                 ? pathname === "/"
-                : pathname.startsWith(item.href);
+                : pathname?.startsWith(item.href);
 
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition sm:text-sm ${
                   isActive
-                    ? "bg-slate-900 text-white"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                    ? "bg-indigo-600 text-white shadow-2xs"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
                 }`}
               >
                 {item.label}
