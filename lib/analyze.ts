@@ -25,6 +25,15 @@ type Span = {
   label: string;
 };
 
+// Matches that sit inside a warning ("never share your OTP") are not scam signals
+const NEGATION =
+  /(do not|don't|dont|never|not to|কখনো|কখনও|করবেন না|দেবেন না|দিবেন না|বলবেন না|জানাবেন না|শেয়ার করবেন না|দিবেন না|korben na|dien na|diben na|den na|janaben na|bolben na)/i;
+
+function isNegated(text: string, start: number, end: number): boolean {
+  const window = text.slice(Math.max(0, start - 25), Math.min(text.length, end + 30));
+  return NEGATION.test(window);
+}
+
 function buildSegments(text: string, spans: Span[]): HighlightSegment[] {
   if (!text) return [];
   if (spans.length === 0) {
@@ -101,6 +110,9 @@ export function analyze(text: string): AnalysisResult {
     while ((match = globalRegex.exec(cleaned)) !== null) {
       if (!match[0]) {
         globalRegex.lastIndex++;
+        continue;
+      }
+      if (rule.negatable && isNegated(cleaned, match.index, match.index + match[0].length)) {
         continue;
       }
       if (!firstMatchedText) {

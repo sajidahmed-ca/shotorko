@@ -20,6 +20,11 @@ const HISTORY_STORAGE_KEY = "shotorko_recent_checks_v1";
 const HISTORY_ENABLED_KEY = "shotorko_history_enabled_v1";
 const MAX_HISTORY_ITEMS = 6;
 
+// Hide long digit runs (OTP, phone, card, account numbers) before anything is stored
+function maskDigits(text: string) {
+  return text.replace(/\d{4,}/g, (m) => "\u2022".repeat(m.length));
+}
+
 function getRiskStyles(level: RiskLevel) {
   switch (level) {
     case "high":
@@ -47,6 +52,32 @@ function getRiskStyles(level: RiskLevel) {
   }
 }
 
+// Clipboard helper: modern API first, legacy fallback second. Returns true if copied.
+async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // fall through to the legacy method
+  }
+  try {
+    const area = document.createElement("textarea");
+    area.value = text;
+    area.setAttribute("readonly", "");
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.appendChild(area);
+    area.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(area);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
 function formatSummary(result: AnalysisResult, levelLabel: string): string {
   const signalLines = result.hits.map(
     (h) => `- ${h.label} (+${h.score}): ${h.advice}`
@@ -70,8 +101,9 @@ export default function HomePage() {
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
 
-  const [historyEnabled, setHistoryEnabled] = useState(true);
+  const [historyEnabled, setHistoryEnabled] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
   useEffect(() => {
@@ -80,7 +112,9 @@ export default function HomePage() {
       if (savedEnabled !== null) {
         setHistoryEnabled(savedEnabled === "true");
       }
-      const savedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
+      // Remove history saved by older versions (it was kept in localStorage)
+      localStorage.removeItem(HISTORY_STORAGE_KEY);
+      const savedHistory = sessionStorage.getItem(HISTORY_STORAGE_KEY);
       if (savedHistory) {
         const parsed = JSON.parse(savedHistory) as HistoryItem[];
         if (Array.isArray(parsed)) {
@@ -94,7 +128,7 @@ export default function HomePage() {
 
   function recordHistory(rawText: string, analysis: AnalysisResult) {
     if (!historyEnabled) return;
-    const cleaned = rawText.trim();
+    const cleaned = maskDigits(rawText.trim());
     if (!cleaned) return;
 
     const preview =
@@ -115,7 +149,7 @@ export default function HomePage() {
     setHistory((prev) => {
       const updated = [newItem, ...prev].slice(0, MAX_HISTORY_ITEMS);
       try {
-        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated));
+        sessionStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated));
       } catch {
         // Ignore storage errors
       }
@@ -127,6 +161,7 @@ export default function HomePage() {
     const analysis = analyze(rawText);
     setResult(analysis);
     setCopied(false);
+    setCopyFailed(false);
     recordHistory(rawText, analysis);
   }
 
@@ -150,13 +185,10 @@ export default function HomePage() {
     if (!result) return;
     const levelLabel = getRiskStyles(result.level).label;
     const summary = formatSummary(result, levelLabel);
-    try {
-      await navigator.clipboard.writeText(summary);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setCopied(false);
-    }
+    const ok = await copyText(summary);
+    setCopied(ok);
+    setCopyFailed(!ok);
+    if (ok) setTimeout(() => setCopied(false), 2000);
   }
 
   function handleToggleHistory() {
@@ -174,7 +206,7 @@ export default function HomePage() {
   function handleClearHistory() {
     setHistory([]);
     try {
-      localStorage.removeItem(HISTORY_STORAGE_KEY);
+      sessionStorage.removeItem(HISTORY_STORAGE_KEY);
     } catch {
       // Ignore storage errors
     }
@@ -300,7 +332,7 @@ export default function HomePage() {
                     onClick={handleCopySummary}
                     className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 transition hover:bg-slate-50 cursor-pointer"
                   >
-                    {copied ? "Copied" : "Copy Summary"}
+                    {copied ? "Copied" : copyFailed ? "Copy failed, try again" : "Copy Summary"}
                   </button>
                 </div>
               </div>
@@ -427,8 +459,9 @@ export default function HomePage() {
                   Recent Checks (Browser Only)
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Saved only in your browser&apos;s local storage—never sent to
-                  a server.
+                  Off by default. When on, kept only in this browser tab and
+                  cleared when you close it. Long numbers (OTP, phone, card)
+                  are hidden. Never sent to a server.
                 </p>
               </div>
 
@@ -454,7 +487,7 @@ export default function HomePage() {
 
             {!historyEnabled ? (
               <p className="mt-4 text-sm text-slate-500">
-                History saving is turned off.
+                History saving is off. Nothing you paste is stored.
               </p>
             ) : history.length === 0 ? (
               <p className="mt-4 text-sm text-slate-500">
