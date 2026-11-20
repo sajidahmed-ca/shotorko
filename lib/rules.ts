@@ -66,7 +66,7 @@ export const rules: Rule[] = [
     pattern: anyOf(
       /\b(account will be (suspended|blocked|locked|closed|deactivated)|suspended within|urgent kyc|update kyc|verify your account now|unusual sign-?in)\b/,
       // Bangla: "অ্যাকাউন্ট বন্ধ হয়ে যাবে", "কেওয়াইসি আপডেট করুন"
-      /((অ্যাকাউন্ট|একাউন্ট|অ্যাকাউন্ট|হিসাব).{0,25}(বন্ধ|ব্লক|স্থগিত|সাসপেন্ড|লক)|(কেওয়াইসি|কেওয়াইসি|kyc).{0,20}(আপডেট|হালনাগাদ|সম্পন্ন|যাচাই))/,
+      /((অ্যাকাউন্ট|একাউন্ট|হিসাব).{0,25}(বন্ধ|ব্লক|স্থগিত|সাসপেন্ড|লক)|(কেওয়াইসি|kyc).{0,20}(আপডেট|হালনাগাদ|সম্পন্ন|যাচাই))/,
       // Banglish: "account bondho hoye jabe", "kyc update korun"
       /\baccount\b.{0,25}\b(bondho|bandho|block|suspend|lock)\b|\b(bondho|block) hoye (jabe|jaben)\b|\bkyc\b.{0,20}\b(update|korun|koren|verify)\b/
     ),

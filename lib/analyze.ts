@@ -38,6 +38,16 @@ type Span = {
   label: string;
 };
 
+const SAFE_OTP_WARNING_PATTERNS: RegExp[] = [
+  /\b(?:never|do not|don't)\s+share\s+(?:your\s+)?(?:otp|one[-\s]?time\s+password|pin|verification\s+code)\b/i,
+  /otp\s+(?:কখনো\s+)?শেয়ার\s+করবেন\s+না/i,
+  /ওটিপি\s+(?:কারও\s+সাথে\s+|কখনো\s+)?শেয়ার\s+করবেন\s+না/i,
+];
+
+function hasSafeOtpWarning(text: string): boolean {
+  return SAFE_OTP_WARNING_PATTERNS.some((pattern) => pattern.test(text));
+}
+
 function buildSegments(text: string, spans: Span[]): HighlightSegment[] {
   if (!text) return [];
   if (spans.length === 0) {
@@ -105,6 +115,7 @@ export function analyze(text: string): AnalysisResult {
   const hits: MatchedRule[] = [];
   const spans: Span[] = [];
   const reasons: RiskReasonItem[] = [];
+  const safeOtpNotice = hasSafeOtpWarning(cleaned);
 
   for (const rule of rules) {
     const flags = rule.pattern.flags.includes("g")
@@ -131,9 +142,22 @@ export function analyze(text: string): AnalysisResult {
     }
 
     if (firstMatchedText) {
-      const reason = `Matched "${firstMatchedText}" under ${rule.label.toLowerCase()}.`;
+      const isOtpRule =
+        /otp|one[-\s]?time|pin|verification\s+code/i.test(rule.id) ||
+        /otp|one[-\s]?time|pin|verification\s+code/i.test(rule.label);
+
+      // Legitimate security notices often include "Never share your OTP" alongside an OTP mention
+      const adjustedScore =
+        safeOtpNotice && isOtpRule ? Math.max(0, rule.score - 3) : rule.score;
+
+      const reason =
+        safeOtpNotice && isOtpRule
+          ? `Matched "${firstMatchedText}" under ${rule.label.toLowerCase()}, with a "never share OTP" warning present.`
+          : `Matched "${firstMatchedText}" under ${rule.label.toLowerCase()}.`;
+
       hits.push({
         ...rule,
+        score: adjustedScore,
         matchedText: firstMatchedText,
         reason,
       });
@@ -143,7 +167,7 @@ export function analyze(text: string): AnalysisResult {
         title: rule.label,
         reason,
         advice: rule.advice,
-        score: rule.score,
+        score: adjustedScore,
       });
     }
   }
@@ -176,7 +200,7 @@ export function analyze(text: string): AnalysisResult {
   }
 
   const ruleScore = hits.reduce((sum, rule) => sum + rule.score, 0);
-  const total = ruleScore + linkScore;
+  const total = Math.max(0, ruleScore + linkScore);
 
   let level: RiskLevel = "low";
   if (total >= 5) {

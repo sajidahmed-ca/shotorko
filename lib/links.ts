@@ -164,7 +164,6 @@ function levenshteinDistance(a: string, b: string): number {
 function getBaseDomainLabel(host: string): string {
   const parts = host.split(".").filter(Boolean);
   if (parts.length <= 1) return host;
-  // Handle common second-level domains like example.com.bd or example.co.uk
   const last = parts[parts.length - 1];
   const secondLast = parts[parts.length - 2];
   if (
@@ -178,7 +177,9 @@ function getBaseDomainLabel(host: string): string {
 }
 
 function detectSuspiciousSpelling(host: string): string | null {
-  const label = getBaseDomainLabel(host);
+  const label = getBaseDomainLabel(host).replace(/-/g, "");
+  if (label.length < 3) return null;
+
   const leetNormalized = label
     .replace(/0/g, "o")
     .replace(/1/g, "l")
@@ -188,21 +189,21 @@ function detectSuspiciousSpelling(host: string): string | null {
     .replace(/7/g, "t");
 
   for (const brand of BRAND_TARGETS) {
-    // Exact brand name as main domain label is normal; lookalikes modify it
-    if (label === brand) continue;
+    if (label === brand || leetNormalized === brand) continue;
 
+    // Avoid short substring false positives on longer unrelated words
     if (
-      leetNormalized.includes(brand) ||
-      label.includes(brand) ||
-      brand.includes(label)
+      brand.length >= 5 &&
+      (leetNormalized.includes(brand) || label.includes(brand))
     ) {
       return `Domain label "${label}" resembles or includes "${brand}"`;
     }
 
     const maxDist = brand.length >= 6 ? 2 : 1;
     if (
-      Math.abs(label.length - brand.length) <= maxDist &&
-      levenshteinDistance(label, brand) <= maxDist
+      label.length >= 4 &&
+      Math.abs(leetNormalized.length - brand.length) <= maxDist &&
+      levenshteinDistance(leetNormalized, brand) <= maxDist
     ) {
       return `Domain label "${label}" has a spelling close to "${brand}"`;
     }
@@ -211,20 +212,28 @@ function detectSuspiciousSpelling(host: string): string | null {
   return null;
 }
 
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 function detectRedirectSignal(parsed: URL, rawUrl: string): string | null {
   for (const [key, value] of parsed.searchParams.entries()) {
     const lowerKey = key.toLowerCase();
-    const lowerVal = value.trim().toLowerCase();
+    const decodedVal = safeDecode(value).trim().toLowerCase();
     if (
       REDIRECT_PARAM_KEYS.has(lowerKey) ||
-      /^https?:\/\//i.test(value.trim()) ||
-      lowerVal.startsWith("//")
+      /^https?:\/\//i.test(decodedVal) ||
+      decodedVal.startsWith("//")
     ) {
       return `Contains redirect-like parameter "${key}" pointing to another destination`;
     }
   }
 
-  const decodedPath = decodeURIComponent(parsed.pathname).toLowerCase();
+  const decodedPath = safeDecode(parsed.pathname).toLowerCase();
   if (
     decodedPath.includes("http://") ||
     decodedPath.includes("https://") ||
