@@ -11,6 +11,50 @@ const NAV_ITEMS = [
   { href: "/about", label: "About" },
 ];
 
+function ShotorkoLogo() {
+  return (
+    <span className="flex items-center gap-2.5">
+      <svg
+        className="h-8 w-8 shrink-0 rounded-xl shadow-[0_6px_16px_-6px_rgba(79,70,229,0.65)]"
+        viewBox="0 0 64 64"
+        fill="none"
+        aria-hidden="true"
+      >
+        <defs>
+          <linearGradient
+            id="navLogoGrad"
+            x1="8"
+            y1="6"
+            x2="56"
+            y2="58"
+            gradientUnits="userSpaceOnUse"
+          >
+            <stop offset="0%" stopColor="#4f46e5" />
+            <stop offset="55%" stopColor="#7c3aed" />
+            <stop offset="100%" stopColor="#0ea5e9" />
+          </linearGradient>
+        </defs>
+        <rect width="64" height="64" rx="16" fill="url(#navLogoGrad)" />
+        <path
+          d="M32 13L47 19.2V30.8C47 40.9 40.6 49.7 32 53C23.4 49.7 17 40.9 17 30.8V19.2L32 13Z"
+          fill="#ffffff"
+          fillOpacity="0.96"
+        />
+        <circle cx="32" cy="32" r="6.5" fill="#4f46e5" />
+        <circle cx="32" cy="32" r="2.5" fill="#ffffff" />
+      </svg>
+      <span className="flex flex-col leading-none">
+        <span className="font-display text-base font-bold tracking-tight text-slate-950">
+          Shotorko
+        </span>
+        <span className="font-mono text-[10px] font-medium text-indigo-600">
+          LOCAL GUARD
+        </span>
+      </span>
+    </span>
+  );
+}
+
 export function Navbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -21,13 +65,9 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
-      <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
-        <Link
-          href="/"
-          className="flex items-center gap-2 text-base font-bold tracking-tight text-slate-950"
-        >
-          <span className="inline-block h-2.5 w-2.5 rounded-full bg-indigo-600" />
-          <span>Shotorko</span>
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2.5 sm:px-6">
+        <Link href="/" className="focus:outline-none">
+          <ShotorkoLogo />
         </Link>
 
         {/* Desktop navigation */}
@@ -45,7 +85,7 @@ export function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+                className={`whitespace-nowrap rounded-lg px-3.5 py-1.5 text-sm font-semibold transition ${
                   isActive
                     ? "bg-indigo-600 text-white shadow-2xs"
                     : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
