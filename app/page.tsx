@@ -180,9 +180,6 @@ export default function HomePage() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const [redactedOutput, setRedactedOutput] = useState<string | null>(null);
-  const [copiedRedacted, setCopiedRedacted] = useState(false);
-
   const [historyEnabled, setHistoryEnabled] = useState(true);
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
@@ -256,32 +253,12 @@ export default function HomePage() {
   function handleClear() {
     setMessage("");
     setResult(null);
-    setRedactedOutput(null);
     setCopied(false);
-    setCopiedRedacted(false);
   }
 
   function handleSelectPreset(sampleText: string) {
     setMessage(sampleText);
-    setRedactedOutput(null);
     runAnalysis(sampleText);
-  }
-
-  function handleRedactText() {
-    if (!message.trim()) return;
-    setRedactedOutput(maskDigits(message));
-    setCopiedRedacted(false);
-  }
-
-  async function handleCopyRedacted() {
-    if (!redactedOutput) return;
-    try {
-      await navigator.clipboard.writeText(redactedOutput);
-      setCopiedRedacted(true);
-      setTimeout(() => setCopiedRedacted(false), 2000);
-    } catch {
-      setCopiedRedacted(false);
-    }
   }
 
   async function handleCopySummary() {
@@ -329,7 +306,6 @@ export default function HomePage() {
   function handleLoadHistoryItem(item: HistoryItem) {
     setMessage(item.fullText);
     setResult(analyze(item.fullText));
-    setRedactedOutput(null);
     setCopied(false);
   }
 
@@ -341,9 +317,8 @@ export default function HomePage() {
       <Navbar />
       <main className="shotorko-grid-bg min-h-screen text-slate-900">
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-10">
-          {/* Desktop 2-Column Workbench Grid */}
           <div className="grid grid-cols-1 items-start gap-7 lg:grid-cols-12">
-            {/* LEFT COLUMN: Header + Scanner Console (Sticky on Desktop) */}
+            {/* LEFT COLUMN: Header + Scanner Console */}
             <div className="space-y-6 lg:sticky lg:top-20 lg:col-span-5">
               <header className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-6 shadow-[0_12px_30px_-16px_rgba(15,23,42,0.14)]">
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-600 via-violet-500 to-sky-500" />
@@ -361,12 +336,11 @@ export default function HomePage() {
                 </h1>
                 <p className="mt-2 text-sm leading-relaxed text-slate-600">
                   Paste an SMS, chat message, email, or URL to spot scam
-                  signals, inspect link anatomy, or mask sensitive numbers
-                  before sharing.
+                  signals and inspect link anatomy. Everything runs locally in
+                  your browser.
                 </p>
               </header>
 
-              {/* Scanner Input Card */}
               <form
                 onSubmit={handleCheck}
                 className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_12px_30px_-16px_rgba(15,23,42,0.12)] sm:p-6"
@@ -418,14 +392,6 @@ export default function HomePage() {
                     >
                       Check Message
                     </button>
-                    <button
-                      type="button"
-                      onClick={handleRedactText}
-                      disabled={!message.trim()}
-                      className="rounded-xl border border-indigo-200 bg-indigo-50/70 px-3.5 py-2.5 text-xs font-semibold text-indigo-800 transition hover:bg-indigo-100 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
-                    >
-                      Mask Digits (4+)
-                    </button>
                     {message && (
                       <button
                         type="button"
@@ -442,33 +408,11 @@ export default function HomePage() {
                     100% local in browser
                   </span>
                 </div>
-
-                {/* Safe Text Redactor Output */}
-                {redactedOutput !== null && (
-                  <div className="mt-4 rounded-xl border border-indigo-200/80 bg-indigo-50/40 p-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-indigo-700">
-                        Safe Redacted Text (4+ Digits Masked)
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleCopyRedacted}
-                        className="rounded-lg border border-indigo-200 bg-white px-2.5 py-1 text-xs font-semibold text-indigo-800 hover:bg-indigo-50 cursor-pointer"
-                      >
-                        {copiedRedacted ? "Copied!" : "Copy Masked"}
-                      </button>
-                    </div>
-                    <p className="mt-2 break-words whitespace-pre-wrap font-mono text-xs leading-relaxed text-slate-800">
-                      {redactedOutput}
-                    </p>
-                  </div>
-                )}
               </form>
             </div>
 
             {/* RIGHT COLUMN: Results, URL Inspector & Recent History */}
             <div className="space-y-6 lg:col-span-7">
-              {/* Desktop Ready Placeholder before first check */}
               {!result && inspectedUrls.length === 0 && (
                 <section className="rounded-2xl border border-dashed border-slate-300/90 bg-white/85 p-6 shadow-2xs sm:p-7">
                   <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-indigo-600">
@@ -478,8 +422,8 @@ export default function HomePage() {
                     Ready to inspect messages &amp; links
                   </h2>
                   <p className="mt-1.5 text-sm leading-relaxed text-slate-600">
-                    Paste any suspicious text or URL on the left (or pick a
-                    quick sample) to see:
+                    Paste any suspicious text or URL (or pick a quick sample)
+                    to see:
                   </p>
                   <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3.5">
@@ -501,10 +445,10 @@ export default function HomePage() {
                     </div>
                     <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3.5">
                       <p className="font-display text-sm font-bold text-slate-900">
-                        3. Safe Masking
+                        3. Local Privacy
                       </p>
                       <p className="mt-1 text-xs leading-relaxed text-slate-600">
-                        Redact OTPs &amp; phone digits before sharing text.
+                        Browser-only checks with 4+ digits masked in history.
                       </p>
                     </div>
                   </div>
@@ -515,48 +459,49 @@ export default function HomePage() {
               {result && riskMeta && (
                 <section
                   aria-live="polite"
-                  className={`relative overflow-hidden rounded-2xl border p-5 sm:p-6 ${riskMeta.card}`}
+                  className={`relative mt-7 overflow-hidden rounded-2xl border p-5 sm:p-6 ${riskMeta.card}`}
                 >
                   <div
                     className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${riskMeta.topAccent}`}
                   />
 
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <span
-                        className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${riskMeta.badge}`}
-                      >
-                        {riskMeta.label}
-                      </span>
-                      <h2 className="font-display mt-2.5 text-lg font-bold text-slate-950 sm:text-xl">
-                        {totalFindings > 0
-                          ? `${totalFindings} finding${
-                              totalFindings > 1 ? "s" : ""
-                            } detected`
-                          : "No common scam patterns matched"}
-                      </h2>
-                      <p className="mt-1 text-xs leading-relaxed text-slate-600 sm:text-sm">
-                        {riskMeta.summaryNote}
-                      </p>
-                    </div>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <span
+                      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${riskMeta.badge}`}
+                    >
+                      {riskMeta.label}
+                    </span>
 
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <div className="rounded-xl border border-slate-200/90 bg-slate-50/90 px-3.5 py-1.5 text-right">
+                    <div className="flex items-center gap-2">
+                      <div className="rounded-xl border border-slate-200/90 bg-slate-50/90 px-3 py-1.5 text-right">
                         <span className="block font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                           Total Score
                         </span>
-                        <span className="font-mono text-base font-bold text-slate-950 tabular-nums">
+                        <span className="font-mono text-sm font-bold text-slate-950 tabular-nums sm:text-base">
                           {result.total}
                         </span>
                       </div>
                       <button
                         type="button"
                         onClick={handleCopySummary}
-                        className="rounded-xl border border-slate-300/90 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 shadow-2xs transition hover:border-slate-400 hover:bg-slate-50 cursor-pointer"
+                        className="rounded-xl border border-slate-300/90 bg-white px-3 py-2.5 text-xs font-semibold text-slate-800 shadow-2xs transition hover:border-slate-400 hover:bg-slate-50 cursor-pointer"
                       >
                         {copied ? "Copied!" : "Copy Summary"}
                       </button>
                     </div>
+                  </div>
+
+                  <div className="mt-3.5 w-full">
+                    <h2 className="font-display text-lg font-bold text-slate-950 sm:text-xl">
+                      {totalFindings > 0
+                        ? `${totalFindings} finding${
+                            totalFindings > 1 ? "s" : ""
+                          } detected`
+                        : "No common scam patterns matched"}
+                    </h2>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-600 sm:text-sm">
+                      {riskMeta.summaryNote}
+                    </p>
                   </div>
 
                   {/* Risk Meter */}
