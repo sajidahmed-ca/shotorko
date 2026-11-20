@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -12,9 +13,14 @@ const NAV_ITEMS = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
+    <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
       <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
         <Link
           href="/"
@@ -24,7 +30,11 @@ export function Navbar() {
           <span>Shotorko</span>
         </Link>
 
-        <nav aria-label="Main navigation" className="flex items-center gap-1 sm:gap-2">
+        {/* Desktop navigation */}
+        <nav
+          aria-label="Main navigation"
+          className="hidden items-center gap-1.5 sm:flex"
+        >
           {NAV_ITEMS.map((item) => {
             const isActive =
               item.href === "/"
@@ -35,7 +45,7 @@ export function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition sm:text-sm ${
+                className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
                   isActive
                     ? "bg-indigo-600 text-white shadow-2xs"
                     : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
@@ -46,7 +56,82 @@ export function Navbar() {
             );
           })}
         </nav>
+
+        {/* Mobile three-line / close toggle */}
+        <button
+          type="button"
+          onClick={() => setMenuOpen((prev) => !prev)}
+          aria-expanded={menuOpen}
+          aria-controls="mobile-nav-menu"
+          aria-label={menuOpen ? "Close menu" : "Open menu"}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-800 transition hover:border-indigo-300 hover:bg-indigo-50/70 hover:text-indigo-700 sm:hidden cursor-pointer"
+        >
+          {menuOpen ? (
+            <svg
+              className="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          ) : (
+            <svg
+              className="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          )}
+        </button>
       </div>
+
+      {/* Mobile dropdown menu */}
+      {menuOpen && (
+        <nav
+          id="mobile-nav-menu"
+          aria-label="Mobile navigation"
+          className="border-t border-slate-200/80 bg-white px-4 py-3 sm:hidden"
+        >
+          <ul className="flex flex-col gap-1">
+            {NAV_ITEMS.map((item) => {
+              const isActive =
+                item.href === "/"
+                  ? pathname === "/"
+                  : pathname?.startsWith(item.href);
+
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    onClick={() => setMenuOpen(false)}
+                    className={`block rounded-xl px-3.5 py-2.5 text-sm font-semibold transition ${
+                      isActive
+                        ? "bg-indigo-600 text-white"
+                        : "text-slate-700 hover:bg-slate-100 hover:text-slate-950"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      )}
     </header>
   );
 }
