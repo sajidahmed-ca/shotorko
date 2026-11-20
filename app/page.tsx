@@ -28,36 +28,42 @@ function getRiskStyles(level: RiskLevel) {
   switch (level) {
     case "high":
       return {
-        badge: "bg-rose-500/15 text-rose-700 border-rose-500/30",
-        card: "border-rose-200/90 bg-gradient-to-b from-rose-50/80 to-white",
-        meter: "bg-rose-600",
+        badge:
+          "bg-rose-500/12 text-rose-700 border-rose-500/30 ring-1 ring-inset ring-rose-500/15",
+        card: "border-rose-200/90 bg-white shadow-[0_14px_34px_-14px_rgba(225,29,72,0.18)]",
+        topAccent: "from-rose-500 via-red-500 to-amber-500",
+        meter: "bg-gradient-to-r from-rose-500 to-red-600",
         meterWidth: "w-full",
         highlight:
-          "bg-rose-200/80 text-rose-950 border-b-2 border-rose-500 rounded px-1 py-0.5 font-medium",
+          "bg-rose-100/95 text-rose-950 border-b-2 border-rose-500 rounded-md px-1.5 py-0.5 font-medium shadow-[0_1px_0_rgba(244,63,94,0.2)]",
         label: "High Risk",
         summaryNote:
           "Multiple strong scam or phishing indicators were detected. Do not share OTPs/PINs, send money, or click unverified links.",
       };
     case "medium":
       return {
-        badge: "bg-amber-500/15 text-amber-800 border-amber-500/30",
-        card: "border-amber-200/90 bg-gradient-to-b from-amber-50/75 to-white",
-        meter: "bg-amber-500",
+        badge:
+          "bg-amber-500/15 text-amber-800 border-amber-500/30 ring-1 ring-inset ring-amber-500/15",
+        card: "border-amber-200/90 bg-white shadow-[0_14px_34px_-14px_rgba(217,119,6,0.18)]",
+        topAccent: "from-amber-400 via-amber-500 to-orange-500",
+        meter: "bg-gradient-to-r from-amber-400 to-amber-600",
         meterWidth: "w-2/3",
         highlight:
-          "bg-amber-200/80 text-amber-950 border-b-2 border-amber-500 rounded px-1 py-0.5 font-medium",
+          "bg-amber-100/95 text-amber-950 border-b-2 border-amber-500 rounded-md px-1.5 py-0.5 font-medium shadow-[0_1px_0_rgba(245,158,11,0.2)]",
         label: "Medium Risk",
         summaryNote:
           "Some caution signals or link anomalies appeared. Verify the sender independently before acting.",
       };
     default:
       return {
-        badge: "bg-emerald-500/15 text-emerald-800 border-emerald-500/30",
-        card: "border-emerald-200/90 bg-gradient-to-b from-emerald-50/70 to-white",
-        meter: "bg-emerald-600",
+        badge:
+          "bg-emerald-500/12 text-emerald-800 border-emerald-500/30 ring-1 ring-inset ring-emerald-500/15",
+        card: "border-emerald-200/90 bg-white shadow-[0_14px_34px_-14px_rgba(5,150,105,0.16)]",
+        topAccent: "from-emerald-500 via-teal-500 to-indigo-500",
+        meter: "bg-gradient-to-r from-emerald-500 to-teal-600",
         meterWidth: "w-1/3",
         highlight:
-          "bg-emerald-200/80 text-emerald-950 border-b-2 border-emerald-500 rounded px-1 py-0.5 font-medium",
+          "bg-emerald-100/95 text-emerald-950 border-b-2 border-emerald-500 rounded-md px-1.5 py-0.5 font-medium shadow-[0_1px_0_rgba(16,185,129,0.2)]",
         label: "Low Risk",
         summaryNote:
           "Few or no known scam patterns matched, but always stay cautious with unexpected requests or links.",
@@ -222,38 +228,43 @@ export default function HomePage() {
   return (
     <>
       <Navbar />
-      <main className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-indigo-50/40 text-slate-900">
+      <main className="shotorko-grid-bg min-h-screen text-slate-900">
         <div className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
-          <header className="mb-8 rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-xs backdrop-blur-xs">
+          {/* Hero Header Card */}
+          <header className="relative mb-7 overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-6 shadow-[0_12px_30px_-16px_rgba(15,23,42,0.14)] sm:p-7">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-600 via-violet-500 to-sky-500" />
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center rounded-full bg-indigo-600/10 px-3 py-1 text-xs font-semibold text-indigo-700">
-                Shotorko • Client-Side Shield
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-600/10 px-3 py-1 text-xs font-semibold text-indigo-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-indigo-600" />
+                Shotorko • Browser-Only Shield
               </span>
-              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600">
-                Zero Server Upload • 4+ Digits Masked
+              <span className="inline-flex items-center rounded-full border border-slate-200/90 bg-slate-50 px-2.5 py-1 font-mono text-[11px] font-medium text-slate-600">
+                100% Local • Digits Masked
               </span>
             </div>
-            <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+            <h1 className="font-display mt-3.5 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
               Check a Suspicious Message or Link
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-slate-600 sm:text-base">
-              Paste an SMS, chat message, email, or URL to inspect scam signals
-              and risky links. Every check runs strictly inside your browser.
+              Paste an SMS, chat message, email, or URL to spot scam signals and
+              risky links. Nothing leaves your device—every rule and link check
+              runs locally in your browser.
             </p>
           </header>
 
+          {/* Scanner Input Card */}
           <form
             onSubmit={handleCheck}
-            className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs sm:p-6"
+            className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_12px_30px_-16px_rgba(15,23,42,0.12)] sm:p-6"
           >
             <div className="flex items-center justify-between gap-2">
               <label
                 htmlFor="message-input"
-                className="block text-sm font-semibold text-slate-800"
+                className="block text-sm font-semibold text-slate-900"
               >
                 Message or link text
               </label>
-              <span className="text-xs font-medium text-slate-400">
+              <span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-[11px] font-medium text-slate-500 tabular-nums">
                 {message.length} chars
               </span>
             </div>
@@ -264,11 +275,11 @@ export default function HomePage() {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Paste SMS, chat message, email, or link here..."
-              className="mt-2.5 w-full rounded-xl border border-slate-300 bg-slate-50/80 p-3.5 text-sm leading-relaxed text-slate-900 placeholder:text-slate-400 transition focus:border-indigo-600 focus:bg-white focus:ring-3 focus:ring-indigo-600/10 focus:outline-none"
+              className="mt-2.5 w-full rounded-xl border border-slate-200 bg-slate-50/70 p-4 text-sm leading-relaxed text-slate-900 placeholder:text-slate-400 shadow-inner transition focus:border-indigo-600 focus:bg-white focus:ring-4 focus:ring-indigo-600/10 focus:outline-none"
             />
 
             <div className="mt-4">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                 Quick test samples
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -277,7 +288,7 @@ export default function HomePage() {
                     key={sample.id}
                     type="button"
                     onClick={() => handleSelectPreset(sample.text)}
-                    className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700 transition hover:border-indigo-300 hover:bg-indigo-50/60 hover:text-indigo-900 cursor-pointer"
+                    className="rounded-lg border border-slate-200/90 bg-slate-50/80 px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-2xs transition hover:-translate-y-0.5 hover:border-indigo-300 hover:bg-indigo-50/70 hover:text-indigo-900 cursor-pointer"
                   >
                     {sample.buttonLabel}
                   </button>
@@ -289,7 +300,7 @@ export default function HomePage() {
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="submit"
-                  className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-xs transition hover:bg-indigo-700 cursor-pointer"
+                  className="rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_20px_-8px_rgba(79,70,229,0.65)] transition hover:from-indigo-700 hover:to-violet-700 active:translate-y-px cursor-pointer"
                 >
                   Check Message
                 </button>
@@ -304,91 +315,100 @@ export default function HomePage() {
                 )}
               </div>
 
-              <span className="text-xs font-medium text-slate-500">
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
                 Processed locally in browser
               </span>
             </div>
           </form>
 
+          {/* Analysis Results Card */}
           {result && riskMeta && (
             <section
               aria-live="polite"
-              className={`mt-6 rounded-2xl border p-5 shadow-xs sm:p-6 ${riskMeta.card}`}
+              className={`relative mt-7 overflow-hidden rounded-2xl border p-5 sm:p-6 ${riskMeta.card}`}
             >
-              <div className="flex flex-wrap items-start justify-between gap-3">
+              <div
+                className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${riskMeta.topAccent}`}
+              />
+
+              <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <span
                     className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${riskMeta.badge}`}
                   >
                     {riskMeta.label}
                   </span>
-                  <h2 className="mt-2.5 text-lg font-bold text-slate-950">
+                  <h2 className="font-display mt-2.5 text-lg font-bold text-slate-950 sm:text-xl">
                     {totalFindings > 0
                       ? `${totalFindings} finding${
                           totalFindings > 1 ? "s" : ""
                         } detected`
                       : "No common scam patterns matched"}
                   </h2>
-                  <p className="mt-1 text-xs leading-relaxed text-slate-700 sm:text-sm">
+                  <p className="mt-1 text-xs leading-relaxed text-slate-600 sm:text-sm">
                     {riskMeta.summaryNote}
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2.5">
-                  <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-1.5 text-right">
-                    <span className="block text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                  <div className="rounded-xl border border-slate-200/90 bg-slate-50/90 px-3.5 py-1.5 text-right">
+                    <span className="block font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                       Total Score
                     </span>
-                    <span className="text-base font-bold text-slate-950">
+                    <span className="font-mono text-base font-bold text-slate-950 tabular-nums">
                       {result.total}
                     </span>
                   </div>
                   <button
                     type="button"
                     onClick={handleCopySummary}
-                    className="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-800 shadow-2xs transition hover:bg-slate-50 cursor-pointer"
+                    className="rounded-xl border border-slate-300/90 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 shadow-2xs transition hover:border-slate-400 hover:bg-slate-50 cursor-pointer"
                   >
                     {copied ? "Copied!" : "Copy Summary"}
                   </button>
                 </div>
               </div>
 
-              <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-slate-200/80">
+              {/* Risk Meter */}
+              <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-slate-200/80 p-0.5">
                 <div
                   className={`h-full rounded-full transition-all duration-300 ${riskMeta.meter} ${riskMeta.meterWidth}`}
                 />
               </div>
 
-              <div className="mt-4 grid grid-cols-1 gap-2 rounded-xl border border-slate-200/80 bg-white p-3 text-center sm:grid-cols-3">
-                <div className="rounded-lg bg-slate-50/70 p-2">
-                  <p className="text-[11px] font-medium text-slate-500">
+              {/* Score Breakdown Grid */}
+              <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                <div className="rounded-xl border border-slate-200/80 bg-slate-50/75 p-3 text-center">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                     Message Signals
                   </p>
-                  <p className="mt-0.5 text-sm font-bold text-slate-900">
+                  <p className="font-mono mt-1 text-base font-bold text-slate-950 tabular-nums">
                     +{result.ruleScore}
                   </p>
                 </div>
-                <div className="rounded-lg bg-slate-50/70 p-2">
-                  <p className="text-[11px] font-medium text-slate-500">
+                <div className="rounded-xl border border-slate-200/80 bg-slate-50/75 p-3 text-center">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                     Link Checks
                   </p>
-                  <p className="mt-0.5 text-sm font-bold text-slate-900">
+                  <p className="font-mono mt-1 text-base font-bold text-slate-950 tabular-nums">
                     +{result.linkScore}
                   </p>
                 </div>
-                <div className="rounded-lg bg-slate-50/70 p-2">
-                  <p className="text-[11px] font-medium text-slate-500">
+                <div className="rounded-xl border border-slate-200/80 bg-slate-50/75 p-3 text-center">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                     Risk Scale
                   </p>
-                  <p className="mt-0.5 text-xs font-semibold text-slate-700">
+                  <p className="font-mono mt-1 text-xs font-semibold text-slate-700">
                     0–1 Low • 2–4 Med • 5+ High
                   </p>
                 </div>
               </div>
 
+              {/* Highlighted Text */}
               {result.segments.length > 0 && (
-                <div className="mt-5 rounded-xl border border-slate-200/90 bg-white p-4">
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <div className="mt-5 rounded-xl border border-slate-200/90 bg-slate-50/60 p-4">
+                  <h3 className="mb-2 font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                     Highlighted Text
                   </h3>
                   <p className="break-words whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
@@ -409,27 +429,31 @@ export default function HomePage() {
                 </div>
               )}
 
+              {/* Message Signals */}
               {result.hits.length > 0 && (
                 <div className="mt-5">
-                  <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <h3 className="mb-2.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                     Message Signals &amp; Reasons ({result.hits.length})
                   </h3>
                   <ul className="space-y-3">
                     {result.hits.map((hit) => (
                       <li
                         key={hit.id}
-                        className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs"
+                        className="rounded-xl border border-slate-200/90 bg-slate-50/50 p-4 shadow-2xs"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <p className="font-semibold text-slate-900">
                             {hit.label}
                           </p>
-                          <span className="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                          <span className="shrink-0 rounded-md border border-slate-200 bg-white px-2 py-0.5 font-mono text-xs font-semibold text-slate-700 tabular-nums">
                             +{hit.score}
                           </span>
                         </div>
-                        <p className="mt-1 text-xs text-slate-600">
-                          Why it triggered: {hit.reason}
+                        <p className="mt-1.5 text-xs text-slate-600">
+                          <span className="font-semibold text-slate-700">
+                            Why it triggered:
+                          </span>{" "}
+                          {hit.reason}
                         </p>
                         <p className="mt-1.5 text-sm leading-relaxed text-slate-700">
                           {hit.advice}
@@ -440,32 +464,32 @@ export default function HomePage() {
                 </div>
               )}
 
+              {/* Link Analysis */}
               {result.links.length > 0 && (
                 <div className="mt-5">
-                  <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <h3 className="mb-2.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                     Link Analysis ({result.links.length})
                   </h3>
                   <ul className="space-y-3">
                     {result.links.map((link) => (
                       <li
                         key={link.url}
-                        className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs"
+                        className="rounded-xl border border-slate-200/90 bg-slate-50/50 p-4 shadow-2xs"
                       >
                         <div className="flex flex-wrap items-start justify-between gap-2">
-                          <span className="break-all font-mono text-sm font-semibold text-slate-900">
+                          <span className="break-all font-mono text-sm font-semibold text-slate-950">
                             {link.url}
                           </span>
-                          <span className="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                          <span className="shrink-0 rounded-md border border-slate-200 bg-white px-2 py-0.5 font-mono text-xs font-semibold text-slate-700 tabular-nums">
                             +{link.score}
                           </span>
                         </div>
-                        <p className="mt-1 text-xs text-slate-500">
-                          Domain: <span className="font-mono">{link.host}</span>{" "}
-                          • Protocol:{" "}
+                        <p className="mt-1 font-mono text-xs text-slate-500">
+                          Domain: {link.host} • Protocol:{" "}
                           <span className="uppercase">{link.protocol}</span>
                         </p>
                         {link.flags.length > 0 ? (
-                          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
+                          <ul className="mt-2.5 list-disc space-y-1 pl-5 text-sm text-slate-700">
                             {link.flags.map((flag) => (
                               <li key={flag}>{flag}</li>
                             ))}
@@ -483,14 +507,14 @@ export default function HomePage() {
               )}
 
               {totalFindings === 0 && (
-                <p className="mt-4 rounded-xl border border-slate-200/90 bg-white p-4 text-sm text-slate-700">
+                <p className="mt-4 rounded-xl border border-slate-200/90 bg-slate-50/70 p-4 text-sm text-slate-700">
                   None of the current rule patterns or link checks triggered.
                   Still double-check the sender and avoid sharing sensitive codes
                   or money on unverified requests.
                 </p>
               )}
 
-              <p className="mt-5 rounded-xl border border-slate-200/70 bg-white/90 p-3.5 text-xs leading-relaxed text-slate-600">
+              <p className="mt-5 rounded-xl border border-slate-200/80 bg-slate-50/90 p-3.5 text-xs leading-relaxed text-slate-600">
                 This is not a final verdict—even a low-risk result does not
                 guarantee a message is safe. If you are unsure, contact the
                 organization through its official website or phone number.
@@ -498,10 +522,11 @@ export default function HomePage() {
             </section>
           )}
 
-          <section className="mt-8 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs sm:p-6">
+          {/* Recent Checks History */}
+          <section className="mt-7 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_12px_30px_-16px_rgba(15,23,42,0.12)] sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-base font-bold text-slate-950">
+                <h2 className="font-display text-base font-bold text-slate-950">
                   Recent Checks (Browser Only)
                 </h2>
                 <p className="text-xs text-slate-500">
@@ -514,7 +539,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={handleToggleHistory}
-                  className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100 cursor-pointer"
+                  className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-indigo-300 hover:bg-indigo-50/60 cursor-pointer"
                 >
                   {historyEnabled ? "Saving: On" : "Saving: Off"}
                 </button>
@@ -539,13 +564,13 @@ export default function HomePage() {
                 No recent checks yet. Checked messages will appear here.
               </p>
             ) : (
-              <ul className="mt-4 divide-y divide-slate-100">
+              <ul className="mt-4 space-y-2">
                 {history.map((item) => {
                   const badgeStyle = getRiskStyles(item.level).badge;
                   return (
                     <li
                       key={item.id}
-                      className="flex items-center justify-between gap-2 py-3 first:pt-0 last:pb-0"
+                      className="flex items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-slate-50/60 px-3.5 py-2.5 transition hover:border-slate-300 hover:bg-white"
                     >
                       <button
                         type="button"
@@ -556,13 +581,13 @@ export default function HomePage() {
                           <p className="truncate text-sm font-medium text-slate-800 group-hover:text-indigo-700">
                             {item.preview}
                           </p>
-                          <p className="mt-0.5 text-xs text-slate-400">
+                          <p className="mt-0.5 font-mono text-[11px] text-slate-400">
                             {item.checkedAt} • {item.findingsCount} finding
                             {item.findingsCount === 1 ? "" : "s"}
                           </p>
                         </div>
                         <span
-                          className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${badgeStyle}`}
+                          className={`shrink-0 rounded-full border px-2.5 py-0.5 font-mono text-xs font-semibold tabular-nums ${badgeStyle}`}
                         >
                           {getRiskStyles(item.level).label} ({item.total})
                         </span>
